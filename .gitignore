@@ -14,6 +14,8 @@ db.sqlite3
 # VS Code
 .vscode/
 
+# Media Files
+media/
 
 # Vector DB
 vector_db/
