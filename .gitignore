@@ -8,7 +8,7 @@ __pycache__/
 # Environment Variables
 .env
 
-# SQLite
+# Database
 db.sqlite3
 
 # VS Code
@@ -18,11 +18,14 @@ db.sqlite3
 media/
 
 # Vector DB
-vector_db/
+vectore_db/
 
 # Logs
 *.log
 
-# OS files
+# Migrations Cache
+*.sqlite3
+
+# OS Files
 .DS_Store
 Thumbs.db
