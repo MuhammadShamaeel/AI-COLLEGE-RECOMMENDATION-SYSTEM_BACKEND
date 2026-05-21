@@ -18,7 +18,7 @@ db.sqlite3
 media/
 
 # Vector DB
-vectore_db/
+vector_db/
 
 # Logs
 *.log
