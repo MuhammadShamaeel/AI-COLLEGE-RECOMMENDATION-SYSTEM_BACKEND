@@ -89,7 +89,7 @@ backend/
 │
 ├── config/
 ├── media/
-├── vector_store/
+├── vector_db/
 ├── requirements.txt
 └── manage.py
 ```
