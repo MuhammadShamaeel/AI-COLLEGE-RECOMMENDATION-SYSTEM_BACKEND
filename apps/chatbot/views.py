@@ -6,31 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from .models import ChatSession, ChatMessage
 from .serializers import (
     ChatSessionSerializer,
-    ChatSessionDetailSerializer,
-    ChatMessageSerializer,
+    ChatSessionDetailSerializer
 )
 
 from apps.rag.services.rag_pipeline import ask_college_assistant
 
-
-# ============================================================
-# CHAT VIEW  — send a message and get AI reply
-# POST /api/chatbot/chat/
-#
-# Request body:
-#   {
-#     "message": "What are the fees for CSE in Kerala?",
-#     "session_id": 3          ← optional; omit to start a new session
-#   }
-#
-# Response:
-#   {
-#     "success": true,
-#     "session_id": 3,
-#     "question": "...",
-#     "answer": "..."
-#   }
-# ============================================================
 
 class ChatView(APIView):
 
