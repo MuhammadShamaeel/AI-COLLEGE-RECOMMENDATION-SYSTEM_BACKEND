@@ -28,6 +28,10 @@ DEBUG = config("DEBUG", cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",   # React Vite default
+    "http://localhost:3000",   # React CRA default
+]
 
 # ==============================
 # APPLICATIONS
@@ -46,6 +50,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
+    'corsheaders',
 
     # Local apps
     'apps.users',
@@ -67,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 

@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
 
@@ -22,14 +23,28 @@ from django.conf.urls.static import static
 
 urlpatterns = [
 
+    # Django admin
     path(
         "admin/",
         admin.site.urls
     ),
 
+    # Users API  (register, login, profile)
     path(
         "api/users/",
         include("apps.users.urls")
+    ),
+
+    # Colleges API  (list, detail, courses)
+    path(
+        "api/colleges/",
+        include("apps.colleges.urls")
+    ),
+
+    # Chatbot API  (chat, sessions)
+    path(
+        "api/chatbot/",
+        include("apps.chatbot.urls")
     ),
 ]
 

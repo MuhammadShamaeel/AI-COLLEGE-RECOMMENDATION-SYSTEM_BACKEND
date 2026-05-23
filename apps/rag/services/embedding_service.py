@@ -1,32 +1,15 @@
 from sentence_transformers import SentenceTransformer
-import numpy as np
 
 
-# Load pretrained embedding model
-embedding_model = SentenceTransformer(
-    "all-MiniLM-L6-v2"
+model = SentenceTransformer(
+    "sentence-transformers/all-MiniLM-L6-v2"
 )
 
 
 def create_embeddings(chunks):
-    """
-    Convert text chunks into embeddings
-    """
 
-    texts = []
+    texts = [chunk["content"] for chunk in chunks]
 
-    for chunk in chunks:
+    embeddings = model.encode(texts)
 
-        texts.append(
-            chunk["content"]
-        )
-
-    embeddings = embedding_model.encode(
-        texts,
-        show_progress_bar=True
-    )
-
-    return np.array(
-        embeddings,
-        dtype="float32"
-    )
+    return embeddings
