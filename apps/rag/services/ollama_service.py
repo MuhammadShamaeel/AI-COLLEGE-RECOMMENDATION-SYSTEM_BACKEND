@@ -40,7 +40,7 @@ def generate_ai_response(prompt: str) -> str:
         print(f"[ollama_service] Ollama ResponseError: {exc}")
         return (
             f"The AI model returned an error: {exc}. "
-            "Please ensure the model is pulled (`ollama pull llama3`)."
+            "Please ensure the model is pulled (`ollama pull mistral`)."
         )
 
     except Exception as exc:

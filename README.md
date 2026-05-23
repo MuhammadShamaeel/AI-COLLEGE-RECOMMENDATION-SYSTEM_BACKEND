@@ -15,7 +15,7 @@ Students can search colleges by course and location, view fee structures, and ge
 | Authentication | JWT (SimpleJWT) |
 | AI / NLP | LangChain, Sentence Transformers |
 | Vector Database | FAISS |
-| LLM | Ollama (llama3) |
+| LLM | Ollama (mistral) |
 | Embeddings | all-MiniLM-L6-v2 (HuggingFace) |
 
 ---
@@ -113,7 +113,7 @@ FAISS Vector Index Storage
           ← Optional Location Filter
           ← Relevant Chunks Retrieved
           ↓
-Ollama LLM (llama3) Prompt Generation
+Ollama LLM (mistral) Prompt Generation
     ↓
 AI Response → User
 ```
@@ -154,7 +154,7 @@ pip install -r requirements.txt
 curl -fsSL https://ollama.com/install.sh | sh
 
 # Pull the LLM model
-ollama pull llama3
+ollama pull mistral
 
 # Start Ollama server
 ollama serve
