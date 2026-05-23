@@ -4,7 +4,6 @@ from apps.rag.services.ollama_service import generate_ai_response
 
 # =============================================================================
 # Location keywords recognised from the CSV's Location column.
-# Add more as your dataset grows.
 # =============================================================================
 KNOWN_LOCATIONS = [
     "bangalore", "bengaluru",
@@ -60,13 +59,6 @@ def ask_college_assistant(question: str) -> str:
         top_k=5,
     )
 
-    # =========================================================================
-    # FIX: if location filter returned nothing, retry without it.
-    # This prevents the "No relevant information found." dead-end when the
-    # location keyword appears in the question but not in the stored chunks
-    # (e.g., the user types "kerala" but chunks say "Kozhikode, Kerala").
-    # =========================================================================
-
     if not retrieved_chunks and detected_location:
         print(
             f"[rag_pipeline] No results for location={detected_location!r}. "
@@ -92,7 +84,6 @@ def ask_college_assistant(question: str) -> str:
 
     for chunk in retrieved_chunks:
 
-        # FIX: use `college_name` — the key set by csv_loader / text_splitter
         college_name = chunk.get("college_name", "Unknown College")
         location     = chunk.get("location",     "Unknown Location")
         content      = chunk.get("content",      "")

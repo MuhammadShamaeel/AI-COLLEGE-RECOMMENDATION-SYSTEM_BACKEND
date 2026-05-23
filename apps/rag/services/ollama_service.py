@@ -1,8 +1,5 @@
 import ollama
 
-
-# Model name — change to whichever model you have pulled locally,
-# e.g. "mistral", "phi3", "gemma2", etc.
 OLLAMA_MODEL = "mistral"
 
 

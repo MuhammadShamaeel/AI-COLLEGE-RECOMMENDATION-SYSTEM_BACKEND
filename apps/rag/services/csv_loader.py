@@ -27,15 +27,9 @@ def load_csv_data():
         course          = str(row.get("Course / Specialization", "")).strip()
         fees            = str(row.get("Total Fee (INR)", "")).strip()
 
-        # FIX: Notes column has many NaN values.
-        # pandas converts missing cells to float NaN; str(NaN) = "nan"
-        # which ends up verbatim in the LLM context. Check before casting.
         raw_notes = row.get("Notes", "")
         notes = str(raw_notes).strip() if pd.notna(raw_notes) else ""
 
-        # Build a rich, human-readable text block per row.
-        # Keep labels consistent so the embedding model and LLM can
-        # parse them reliably.
         lines = [
             f"College Name: {college_name}",
             f"Location: {location}",
@@ -51,8 +45,6 @@ def load_csv_data():
 
         documents.append(
             {
-                # Use consistent key names throughout the pipeline.
-                # Both text_splitter and retrieval_service rely on these.
                 "college_name": college_name,
                 "location": location,
                 "state": state,

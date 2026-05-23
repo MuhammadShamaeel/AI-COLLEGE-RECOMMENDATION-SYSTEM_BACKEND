@@ -29,8 +29,6 @@ def split_documents(documents):
 
             final_chunks.append(
                 {
-                    # Mirror the keys used in csv_loader so every
-                    # downstream service can rely on the same dict shape.
                     "college_name": doc["college_name"],
                     "location":     doc["location"],
                     "state":        doc.get("state", ""),

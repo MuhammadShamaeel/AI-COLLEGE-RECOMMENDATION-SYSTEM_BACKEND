@@ -81,8 +81,6 @@ def retrieve_relevant_chunks(query, location=None, top_k=5):
 
         chunk = chunks[idx]
 
-        # FIX 1 + FIX 4: location filter with correct indentation and
-        #                 case-insensitive comparison.
         if location:
             chunk_location = str(chunk.get("location", "")).strip().lower()
             query_location = str(location).strip().lower()
@@ -101,7 +99,7 @@ def retrieve_relevant_chunks(query, location=None, top_k=5):
             break
 
     # =========================================================================
-    # Debug output (printed to Django console / logs)
+    # Debug output
     # =========================================================================
 
     print(f"\nQuery: {query!r}")
