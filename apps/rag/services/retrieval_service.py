@@ -75,7 +75,6 @@ def retrieve_relevant_chunks(query, location=None, top_k=5):
 
         distance = float(distances[0][rank])
 
-        # FIX 3: skip chunks that are too far from the query
         if distance > MAX_L2_DISTANCE:
             continue
 
@@ -85,8 +84,6 @@ def retrieve_relevant_chunks(query, location=None, top_k=5):
             chunk_location = str(chunk.get("location", "")).strip().lower()
             query_location = str(location).strip().lower()
 
-            # Accept the chunk if either string contains the other —
-            # e.g. "bangalore" matches "kengeri, bengaluru" and vice-versa.
             if (
                 query_location not in chunk_location
                 and chunk_location not in query_location
@@ -108,7 +105,6 @@ def retrieve_relevant_chunks(query, location=None, top_k=5):
 
     for chunk in retrieved_chunks:
         print("=" * 50)
-        # FIX 2: use the correct key `college_name` (not `college`)
         print(f"College:  {chunk.get('college_name', 'N/A')}")
         print(f"Location: {chunk.get('location', 'N/A')}")
         print(f"Content preview: {chunk.get('content', '')[:200]}")
