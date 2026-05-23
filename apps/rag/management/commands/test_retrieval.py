@@ -26,7 +26,7 @@ class Command(BaseCommand):
             print("=" * 50)
 
             print(
-                f"College: {result['college']}"
+                f"College: {result['college_name']}"
             )
 
             print(

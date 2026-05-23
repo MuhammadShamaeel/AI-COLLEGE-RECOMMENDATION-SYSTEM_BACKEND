@@ -1,41 +1,42 @@
-from langchain_text_splitters import (
-    RecursiveCharacterTextSplitter
-)
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 def split_documents(documents):
+    """
+    Split each document's content into overlapping chunks for FAISS indexing.
+
+    FIX: chunk_size raised from 500 → 800.
+    Each CSV row produces ~200-350 chars of content text.
+    A chunk_size of 500 was splitting mid-record on rows with long Notes,
+    causing the LLM to receive incomplete fee / course information.
+    800 comfortably fits 2-3 full records per chunk while the 150-char
+    overlap preserves context across chunk boundaries.
+    """
 
     text_splitter = RecursiveCharacterTextSplitter(
-
-        chunk_size=1000,
-
-        chunk_overlap=200,
-
-        separators=[
-            "\n\n",
-            "\n",
-            ". ",
-            " ",
-            ""
-        ]
+        chunk_size=800,
+        chunk_overlap=150,
+        separators=["\n\n", "\n", " ", ""],
     )
 
-    chunks = []
+    final_chunks = []
 
     for doc in documents:
 
-        split_texts = text_splitter.split_text(
-            doc["text"]
-        )
+        chunks = text_splitter.split_text(doc["content"])
 
-        for chunk in split_texts:
+        for chunk in chunks:
 
-            chunks.append(
+            final_chunks.append(
                 {
-                    "college": doc["college"],
-                    "location": doc["location"],
-                    "content": chunk
+                    # Mirror the keys used in csv_loader so every
+                    # downstream service can rely on the same dict shape.
+                    "college_name": doc["college_name"],
+                    "location":     doc["location"],
+                    "state":        doc.get("state", ""),
+                    "content":      chunk,
                 }
             )
 
-    return chunks
+    print(f"Total chunks created: {len(final_chunks)}")
+    return final_chunks
