@@ -103,4 +103,8 @@ build/
 # ================================
 # Node (if any frontend in same repo)
 # ================================
-node_modules/
+node_modules/vector_db/
+media/
+*.faiss
+*.pkl
+*.pdf
