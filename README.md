@@ -1,67 +1,60 @@
-# CampusIQ — AI College Recommendation System (Backend)
+# EduNova — AI College Recommendation System (Backend)
 
 An AI-powered college discovery and course assistance platform built with Django REST Framework, Retrieval-Augmented Generation (RAG), FAISS vector search, and Ollama LLM.
 
-Students can search colleges by course and location, view fee structures, and get intelligent answers to their queries through an AI chatbot powered by real college data.
+Students can search colleges by course, state, and location, view fee structures, and get intelligent answers through an AI chatbot powered by real college data.
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Backend | Python, Django, Django REST Framework |
-| Database | PostgreSQL |
+|---------|------------|
+| Backend | Python 3.13+, Django 6.0, Django REST Framework |
+| Database | SQLite (Default) / PostgreSQL (Production) |
 | Authentication | JWT (SimpleJWT) |
-| AI / NLP | LangChain, Sentence Transformers |
+| AI / NLP | Sentence Transformers |
 | Vector Database | FAISS |
-| LLM | Ollama (mistral) |
-| Embeddings | all-MiniLM-L6-v2 (HuggingFace) |
+| LLM | Ollama (TinyLlama / Llama 3.2 / Mistral) |
+| Embeddings | all-MiniLM-L6-v2 |
 
 ---
 
 ## Project Structure
 
-```
+```text
 backend/
 │
 ├── apps/
-│   ├── users/               # Auth — register, login, profile
-│   ├── colleges/            # College & course listing, search, filtering
-│   ├── chatbot/             # Chat sessions, message history, AI replies
+│   ├── users/
+│   ├── colleges/
+│   ├── chatbot/
 │   └── rag/
 │       ├── services/
-│       │   ├── csv_loader.py        # Load and parse college CSV data
-│       │   ├── text_splitter.py     # Chunk documents for embedding
-│       │   ├── embedding_service.py # Generate sentence embeddings
-│       │   ├── vector_store.py      # Save/load FAISS index
-│       │   ├── retrieval_service.py # Semantic similarity search
-│       │   ├── rag_pipeline.py      # Full RAG orchestration
-│       │   ├── ollama_service.py    # Ollama LLM integration
-│       │   └── text_cleaner.py      # Text preprocessing
+│       │   ├── csv_loader.py
+│       │   ├── text_splitter.py
+│       │   ├── embedding_service.py
+│       │   ├── vector_store.py
+│       │   ├── retrieval_service.py
+│       │   ├── rag_pipeline.py
+│       │   ├── ollama_service.py
+│       │   └── text_cleaner.py
+│       │
 │       └── management/
 │           └── commands/
-│               ├── process_csv.py   # Build vector DB from CSV
-│               ├── test_chatbot.py  # CLI chatbot test
-│               └── test_retrieval.py # CLI retrieval test
+│               ├── process_csv.py
+│               ├── test_chatbot.py
+│               └── test_retrieval.py
 │
 ├── config/
-│   ├── settings.py
-│   ├── urls.py
-│   ├── wsgi.py
-│   └── asgi.py
-│
 ├── data/
 │   └── College_Fees_Master_2026-27.csv
 │
-├── vector_db/               # Auto-generated — not committed to git
-│   ├── college_index.faiss
-│   └── chunks.pkl
-│
-├── media/                   # User uploads — not committed to git
+├── vector_db/
+├── media/
 ├── manage.py
 ├── requirements.txt
-└── .env                     # Not committed to git
+└── .env
 ```
 
 ---
@@ -69,159 +62,194 @@ backend/
 ## API Endpoints
 
 ### Users
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/users/register/` | No | Register new user |
-| POST | `/api/users/login/` | No | Login, returns JWT tokens |
-| POST | `/api/users/token/refresh/` | No | Refresh access token |
-| GET / PUT | `/api/users/profile/` | Yes | View or update profile |
+
+| Method | Endpoint | Description |
+|----------|-----------|-------------|
+| POST | `/api/users/register/` | Register user |
+| POST | `/api/users/login/` | Login and receive JWT |
+| POST | `/api/users/token/refresh/` | Refresh JWT token |
+| GET / PUT | `/api/users/profile/` | View or update profile |
 
 ### Colleges
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/colleges/` | No | List all colleges |
-| GET | `/api/colleges/?course=CSE&location=Kerala&state=Kerala` | No | Search/filter colleges |
-| GET | `/api/colleges/<id>/` | No | College detail |
-| GET | `/api/colleges/<id>/courses/` | No | All courses of a college |
+
+| Method | Endpoint | Description |
+|----------|-----------|-------------|
+| GET | `/api/colleges/` | List colleges |
+| GET | `/api/colleges/filters/` | Available filters |
+| GET | `/api/colleges/<id>/` | College details |
+| GET | `/api/colleges/<id>/courses/` | College courses |
+
+Example:
+
+```http
+GET /api/colleges/?course=BCA&state=Kerala
+```
 
 ### Chatbot
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/chatbot/chat/` | Yes | Send message, get AI reply |
-| GET | `/api/chatbot/sessions/` | Yes | List all chat sessions |
-| GET | `/api/chatbot/sessions/<id>/` | Yes | Full message history of a session |
-| DELETE | `/api/chatbot/sessions/<id>/` | Yes | Delete a session |
+
+| Method | Endpoint | Description |
+|----------|-----------|-------------|
+| POST | `/api/chatbot/chat/` | Send query to AI |
+| GET | `/api/chatbot/sessions/` | List sessions |
+| GET | `/api/chatbot/sessions/<id>/` | Session history |
+| DELETE | `/api/chatbot/sessions/<id>/` | Delete session |
 
 ---
 
 ## RAG Pipeline Flow
 
-```
-CSV Data
-    ↓
-Text Extraction & Cleaning
-    ↓
-Document Chunking (chunk_size=800, overlap=150)
-    ↓
-Sentence Embedding (all-MiniLM-L6-v2)
-    ↓
-FAISS Vector Index Storage
-    ↓
-          ← User Query
-          ← Query Embedding
-          ← Similarity Search (L2 distance threshold)
-          ← Optional Location Filter
-          ← Relevant Chunks Retrieved
-          ↓
-Ollama LLM (mistral) Prompt Generation
-    ↓
-AI Response → User
+```text
+College CSV Data
+        │
+        ▼
+Text Cleaning
+        │
+        ▼
+Document Chunking
+        │
+        ▼
+Sentence Embeddings
+        │
+        ▼
+FAISS Vector Storage
+        │
+        ▼
+Similarity Search
+        │
+        ▼
+Relevant Context Retrieval
+        │
+        ▼
+Ollama LLM
+        │
+        ▼
+AI Response
 ```
 
 ---
 
-## Setup Instructions
+## Installation
 
-### 1. Clone the repository
+### 1. Clone Repository
 
 ```bash
-git clone <repository-url>
-cd backend
+git clone https://github.com/MuhammadShamaeel/AI-COLLEGE-RECOMMENDATION-SYSTEM_BACKEND.git
+
+cd AI-COLLEGE-RECOMMENDATION-SYSTEM_BACKEND
 ```
 
-### 2. Create and activate virtual environment
+### 2. Create Virtual Environment
 
 ```bash
 python -m venv venv
+```
 
-# Windows
+#### Windows
+
+```bash
 venv\Scripts\activate
+```
 
-# Linux / Mac
+#### Linux / Mac
+
+```bash
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Install and start Ollama
+### 4. Install Ollama
+
+Download from:
+
+https://ollama.com
+
+Pull a model:
 
 ```bash
-# Linux
-curl -fsSL https://ollama.com/install.sh | sh
+ollama pull tinyllama
+```
 
-# Pull the LLM model
+or
+
+```bash
+ollama pull llama3.2:3b
+```
+
+or
+
+```bash
 ollama pull mistral
+```
 
-# Start Ollama server
+Start Ollama:
+
+```bash
 ollama serve
 ```
 
-### 5. Configure environment variables
+### 5. Configure Environment Variables
 
-Create a `.env` file in the `backend/` directory:
+Create a `.env` file:
 
 ```env
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=your-secret-key
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
-
-DB_NAME=college_ai_db
-DB_USER=postgres
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
 ```
 
-### 6. Run database migrations
+### 6. Run Migrations
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 7. Create superuser (for Django admin)
+### 7. Create Superuser (Optional)
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 8. Build the vector database
+### 8. Build Vector Database
 
 ```bash
 python manage.py process_csv
 ```
 
-This reads `data/College_Fees_Master_2026-27.csv`, generates embeddings, and saves the FAISS index to `vector_db/`. Run this again any time the CSV data changes.
-
-### 9. Start the development server
+### 9. Run Development Server
 
 ```bash
 python manage.py runserver
 ```
 
-Server runs at `http://localhost:8000`
+Backend URL:
+
+```text
+http://localhost:8000
+```
 
 ---
 
 ## Testing
 
-### Test the chatbot from the terminal
+### Chatbot Test
 
 ```bash
 python manage.py test_chatbot
 ```
 
-### Test semantic retrieval
+### Retrieval Test
 
 ```bash
 python manage.py test_retrieval
 ```
 
-### Test via Django shell
+### Django Shell Test
 
 ```bash
 python manage.py shell
@@ -230,41 +258,132 @@ python manage.py shell
 ```python
 from apps.rag.services.rag_pipeline import ask_college_assistant
 
-response = ask_college_assistant("B.Tech CSE colleges in Kerala with fees")
+response = ask_college_assistant(
+    "BCA colleges in Kerala with fees"
+)
+
 print(response)
+```
+
+---
+
+## API Testing
+
+### Search Colleges
+
+```bash
+curl "http://localhost:8000/api/colleges/?course=BCA&state=Kerala"
+```
+
+### Get Filters
+
+```bash
+curl "http://localhost:8000/api/colleges/filters/"
+```
+
+### Chat with AI
+
+```bash
+curl -X POST http://localhost:8000/api/chatbot/chat/ \
+-H "Content-Type: application/json" \
+-d '{"message":"Tell me about BCA colleges in Kerala"}'
 ```
 
 ---
 
 ## Django Admin
 
-Access the admin panel at `http://localhost:8000/admin/` after creating a superuser.
+```text
+http://localhost:8000/admin/
+```
 
-From admin you can view and manage:
-- Users and profiles
-- Colleges and courses
-- Chat sessions and messages
+Manage:
+
+- Users
+- Profiles
+- Colleges
+- Courses
+- Chat Sessions
+- Messages
+
+---
+
+## Environment Variables
+
+| Variable | Description |
+|------------|-------------|
+| SECRET_KEY | Django secret key |
+| DEBUG | Debug mode |
+| ALLOWED_HOSTS | Allowed hosts |
+| DB_NAME | Database name |
+| DB_USER | Database username |
+| DB_PASSWORD | Database password |
+| DB_HOST | Database host |
+| DB_PORT | Database port |
+
+---
+
+## Troubleshooting
+
+### Ollama Not Running
+
+```bash
+curl http://localhost:11434
+```
+
+Restart:
+
+```bash
+ollama serve
+```
+
+### Missing Vector Database
+
+```bash
+python manage.py process_csv
+```
+
+### Module Errors
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
 ## Future Enhancements
 
-- PDF brochure upload and processing
-- Personalized college recommendations
-- Advanced AI ranking system
-- Multi-language chatbot support
-- Docker deployment setup
-- Cloud deployment (AWS / GCP)
+- Personalized recommendations
+- College ranking system
+- PDF processing
+- Multi-language chatbot
+- Docker support
+- Cloud deployment
 
 ---
 
 ## Contributors
 
-- Archana K
-- Muhammed Shamaeel K M
+**Muhammed Shamaeel K M**
+- Frontend Development
+- UI/UX Design
+
+**Archana K**
+- Backend Development
+- RAG Pipeline
 
 ---
 
 ## License
 
-This project is developed for educational and internship purposes.
+Educational Project.
+
+---
+
+## Repository Links
+
+Frontend Repository:
+https://github.com/MuhammadShamaeel/AI-COLLEGE-RECOMMENDATION-SYSTEM_FRONTEND
+
+Backend Repository:
+https://github.com/MuhammadShamaeel/AI-COLLEGE-RECOMMENDATION-SYSTEM_BACKEND
