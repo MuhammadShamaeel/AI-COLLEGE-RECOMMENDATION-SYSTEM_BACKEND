@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+import os
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,9 +25,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config("SECRET_KEY")
 
-DEBUG = config("DEBUG", cast=bool)
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.onrender.com").split(",")
 
 
 # ==============================
@@ -34,19 +35,18 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
 # ==============================
 
 INSTALLED_APPS = [
-
-    # Django apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',  # Add this for static files in production
     'django.contrib.staticfiles',
 
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
-    'corsheaders',  # Only ONE corsheaders - REMOVED THE DUPLICATE
+    'corsheaders',
 
     # Local apps
     'apps.users',
@@ -61,8 +61,9 @@ INSTALLED_APPS = [
 # ==============================
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Only ONE CorsMiddleware - at the top
-    'django.middleware.security.SecurityMiddleware',  # REMOVED THE DUPLICATE
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add this for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -117,7 +118,7 @@ DATABASES = {
         'USER': config('DB_USER'),
         'PASSWORD': config('DB_PASSWORD'),
         'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
@@ -167,6 +168,8 @@ USE_TZ = True
 # ==============================
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
 # ==============================
@@ -174,7 +177,6 @@ STATIC_URL = 'static/'
 # ==============================
 
 MEDIA_URL = "/media/"
-
 MEDIA_ROOT = BASE_DIR / "media"
 
 
@@ -213,12 +215,13 @@ SIMPLE_JWT = {
 
 
 # ==============================
-# CORS SETTINGS (Only once)
+# CORS SETTINGS
 # ==============================
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite default port
-    "http://localhost:3000",   # React CRA default
-]
+# Allow your frontend Vercel URL and localhost
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:5173,http://localhost:3000",
+).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
