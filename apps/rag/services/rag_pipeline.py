@@ -2,133 +2,87 @@ from apps.rag.services.retrieval_service import retrieve_relevant_chunks
 from apps.rag.services.ollama_service import generate_ai_response
 
 
-# =============================================================================
-# Location keywords recognised from the CSV's Location column.
-# =============================================================================
-KNOWN_LOCATIONS = [
-    "bangalore", "bengaluru",
-    "kerala",
-    "mangalore",
-    "chennai",
-    "coimbatore",
-    "palakkad",
-    "kozhikode",
-    "malappuram",
-    "ernakulam",
-    "kasaragod",
-    "idukki",
-    "thrissur",
-    "kottayam",
-    "kollam",
-    "trivandrum", "thiruvananthapuram",
-]
+def format_college_info(chunks):
+    """Format college information in a clean, readable way."""
+    colleges = []
+    seen = set()
+    
+    for chunk in chunks:
+        college_name = chunk.get("college_name", "")
+        if college_name in seen:
+            continue
+        seen.add(college_name)
+        
+        location = chunk.get("location", "Unknown")
+        state = chunk.get("state", "Unknown")
+        content = chunk.get("content", "")
+        
+        # Parse content for course and fee
+        lines = content.split('\n')
+        course = ""
+        fee = ""
+        
+        for line in lines:
+            if 'Course' in line or 'Specialization' in line:
+                course = line.split(':')[-1].strip() if ':' in line else line
+            if 'Fee' in line or 'INR' in line:
+                fee = line.split(':')[-1].strip() if ':' in line else line
+        
+        colleges.append({
+            "name": college_name,
+            "location": f"{location}, {state}",
+            "course": course[:100] if course else "Various Programs",
+            "fee": fee if fee else "Contact college"
+        })
+    
+    return colleges
 
 
-def _detect_location(question: str):
-    """Return the first location keyword found in the question, else None."""
-    q = question.lower()
-    for loc in KNOWN_LOCATIONS:
-        if loc in q:
-            return loc.capitalize()
-    return None
-
-
-def ask_college_assistant(question: str) -> str:
+def ask_college_assistant(question: str, context_state: str = None, context_location: str = None) -> str:
     """
-    Full RAG pipeline:
-      1. Detect location from question (optional)
-      2. Retrieve top-k relevant chunks from FAISS
-      3. Build a grounded prompt
-      4. Generate a response via Ollama
-
-    Fixed bugs vs. original:
-    - Key mismatch: chunks use `college_name` / `location`, not `college`
-    - If the location filter returns 0 results, retry without the filter
-      so the user always gets an answer (the LLM is still told to be honest).
+    RAG pipeline for college recommendations.
     """
-
-    detected_location = _detect_location(question)
-
-    # =========================================================================
-    # Retrieve chunks (with location filter)
-    # =========================================================================
-
+    # Retrieve relevant chunks
     retrieved_chunks = retrieve_relevant_chunks(
         query=question,
-        location=detected_location,
-        top_k=5,
+        state=context_state,
+        top_k=8,
     )
 
-    if not retrieved_chunks and detected_location:
-        print(
-            f"[rag_pipeline] No results for location={detected_location!r}. "
-            "Retrying without location filter."
-        )
-        retrieved_chunks = retrieve_relevant_chunks(
-            query=question,
-            location=None,
-            top_k=5,
-        )
-
     if not retrieved_chunks:
-        return (
-            "I couldn't find relevant college information for your query. "
-            "Please try rephrasing or ask about a specific course, college, or location."
-        )
+        return f"I couldn't find any colleges matching '{question}'. Please try a different search or use the filters above."
 
-    # =========================================================================
-    # Build context string
-    # =========================================================================
+    # Format college information
+    colleges = format_college_info(retrieved_chunks)
+    
+    if not colleges:
+        return "No college information found. Please try a different search."
 
-    context_parts = []
+    # Build a clean prompt
+    college_list = []
+    for i, college in enumerate(colleges[:5], 1):
+        college_list.append(f"{i}. **{college['name']}**")
+        college_list.append(f"   📍 Location: {college['location']}")
+        college_list.append(f"   📚 Course: {college['course']}")
+        college_list.append(f"   💰 Fee: {college['fee']}")
+        college_list.append("")
+    
+    context = "\n".join(college_list)
+    
+    # Simple, clean prompt
+    prompt = f"""Based on this college information, answer the question.
 
-    for chunk in retrieved_chunks:
-
-        college_name = chunk.get("college_name", "Unknown College")
-        location     = chunk.get("location",     "Unknown Location")
-        content      = chunk.get("content",      "")
-
-        context_parts.append(
-            f"College: {college_name}\n"
-            f"Location: {location}\n"
-            f"Details:\n{content}\n"
-            f"{'=' * 52}"
-        )
-
-    context = "\n\n".join(context_parts)
-
-    # =========================================================================
-    # Prompt
-    # =========================================================================
-
-    prompt = f"""You are CampusIQ, an AI College Recommendation Assistant for students in India.
-
-Answer the student's question using ONLY the college information provided in the CONTEXT section below.
-
-Guidelines:
-- Recommend suitable colleges with their locations
-- Mention the relevant course and specialisation
-- State the total fee clearly (in INR)
-- If multiple colleges match, list all of them
-- Be concise and helpful
-- Do NOT invent or assume any information not present in the context
-- If the context does not contain enough information, say:
-  "This information is not available in our current database."
-
----------------- CONTEXT ----------------
-
+COLLEGES:
 {context}
 
----------------- STUDENT QUESTION ----------------
+QUESTION: {question}
 
-{question}
-
----------------- YOUR ANSWER ----------------
-"""
-
-    # =========================================================================
-    # Generate and return response
-    # =========================================================================
+Give a helpful, concise answer recommending specific colleges from the list above. If asking for best college, recommend 2-3 options with brief reasons."""
 
     response = generate_ai_response(prompt)
+    
+    # If response is empty or too short, provide fallback
+    if len(response) < 50:
+        response = f"Here are some colleges for your search:\n\n{context}"
+    
     return response

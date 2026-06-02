@@ -1,76 +1,51 @@
 import faiss
 import pickle
 import numpy as np
-
+from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
-
-# =============================================================================
-# Embedding model (loaded once at module import to avoid repeated disk reads)
-# =============================================================================
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
+VECTOR_DB_PATH = BACKEND_DIR / "vector_db"
 
 model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-
-
-# =============================================================================
-# L2 distance threshold
-# =============================================================================
-# FAISS IndexFlatL2 returns squared-Euclidean distances.
-# Embeddings from all-MiniLM-L6-v2 are normalised to unit length, so
-# distances lie in [0, 4].  A chunk with distance > 1.5 is semantically
-# unrelated to the query and should be discarded.
 MAX_L2_DISTANCE = 1.5
 
 
-def retrieve_relevant_chunks(query, location=None, top_k=5):
-    """
-    Embed *query*, search FAISS for the nearest chunks, apply an optional
-    location filter, and return the best matches.
+def load_vector_store():
+    index_path = VECTOR_DB_PATH / "college_index.faiss"
+    chunks_path = VECTOR_DB_PATH / "chunks.pkl"
 
-    Fixed bugs vs. original:
-    1. Indentation error in the location-filter block caused the inner `if`
-       check to execute even when `location=None`, silently dropping every
-       chunk that didn't match the empty string comparison.
-    2. Dict key mismatch: chunks are stored as `college_name` / `location`
-       but the original code read them as `college` / `location` — the
-       wrong key returned None, so the context sent to Ollama was full of
-       "Unknown College" placeholders instead of real names.
-    3. No distance threshold: FAISS always returns `top_k` results even
-       when none of them are relevant. Added MAX_L2_DISTANCE guard.
-    4. Location matching was case-sensitive. Now both sides are lowercased.
-    """
+    if not index_path.exists() or not chunks_path.exists():
+        print(f"Vector DB not found at {VECTOR_DB_PATH}")
+        return None, None
 
-    # =========================================================================
-    # Load FAISS index and chunk store
-    # =========================================================================
-
-    index = faiss.read_index("vector_db/college_index.faiss")
-
-    with open("vector_db/chunks.pkl", "rb") as f:
+    index = faiss.read_index(str(index_path))
+    with open(chunks_path, "rb") as f:
         chunks = pickle.load(f)
 
-    # =========================================================================
-    # Embed query and search
-    # =========================================================================
+    return index, chunks
 
-    query_embedding = np.array(
-        model.encode([query]), dtype="float32"
-    )
 
-    # Fetch more candidates than needed so the location filter has room
-    search_k = top_k * 4 if location else top_k
+def retrieve_relevant_chunks(query, state=None, top_k=8):
+    """Retrieve relevant chunks based on query and state filter."""
+    
+    index, chunks = load_vector_store()
+    
+    if index is None or chunks is None:
+        return []
+
+    # Embed query
+    query_embedding = np.array(model.encode([query]), dtype="float32")
+    
+    # Search for more candidates
+    search_k = top_k * 3
     distances, indices = index.search(query_embedding, search_k)
 
-    # =========================================================================
-    # Collect results, applying distance threshold and optional location filter
-    # =========================================================================
-
     retrieved_chunks = []
-
+    seen_colleges = set()
+    
     for rank, idx in enumerate(indices[0]):
-
         if idx < 0 or idx >= len(chunks):
-            # FAISS returns -1 when the index has fewer items than search_k
             continue
 
         distance = float(distances[0][rank])
@@ -79,35 +54,24 @@ def retrieve_relevant_chunks(query, location=None, top_k=5):
             continue
 
         chunk = chunks[idx]
+        college_name = chunk.get("college_name", "")
 
-        if location:
-            chunk_location = str(chunk.get("location", "")).strip().lower()
-            query_location = str(location).strip().lower()
-
-            if (
-                query_location not in chunk_location
-                and chunk_location not in query_location
-            ):
+        # Apply state filter
+        if state:
+            chunk_state = str(chunk.get("state", "")).strip().lower()
+            query_state = str(state).strip().lower()
+            if query_state not in chunk_state:
                 continue
+
+        # Avoid duplicate colleges
+        if college_name in seen_colleges:
+            continue
+        seen_colleges.add(college_name)
 
         retrieved_chunks.append(chunk)
 
         if len(retrieved_chunks) >= top_k:
             break
 
-    # =========================================================================
-    # Debug output
-    # =========================================================================
-
-    print(f"\nQuery: {query!r}")
-    print(f"Location filter: {location!r}")
-    print(f"Retrieved {len(retrieved_chunks)} chunk(s):\n")
-
-    for chunk in retrieved_chunks:
-        print("=" * 50)
-        print(f"College:  {chunk.get('college_name', 'N/A')}")
-        print(f"Location: {chunk.get('location', 'N/A')}")
-        print(f"Content preview: {chunk.get('content', '')[:200]}")
-        print()
-
+    print(f"[RAG] Found {len(retrieved_chunks)} colleges for '{query}'")
     return retrieved_chunks

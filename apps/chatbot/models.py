@@ -2,17 +2,13 @@ from django.db import models
 from django.conf import settings
 
 
-# ============================================================
-# CHAT SESSION MODEL
-# One session = one conversation thread per user
-# ============================================================
-
 class ChatSession(models.Model):
-
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="chat_sessions"
+        related_name="chat_sessions",
+        null=True,  # Allow null for anonymous users
+        blank=True
     )
 
     title = models.CharField(
@@ -21,23 +17,16 @@ class ChatSession(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-updated_at"]
 
     def __str__(self):
-        return f"Session {self.id} - {self.user.email}"
+        return f"Session {self.id} - {self.title}"
 
-
-# ============================================================
-# CHAT MESSAGE MODEL
-# Stores every user question and AI reply
-# ============================================================
 
 class ChatMessage(models.Model):
-
     ROLE_CHOICES = [
         ("user", "User"),
         ("assistant", "Assistant"),
@@ -55,7 +44,6 @@ class ChatMessage(models.Model):
     )
 
     content = models.TextField()
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
