@@ -28,3 +28,5 @@ pandas==2.2.3
 # - faiss-cpu, langchain, langchain-* (requires heavy compute)
 # - ollama (cannot run on Render free tier)
 # - numpy, scipy, scikit-learn (optional, add if needed)
+
+faiss-cpu==1.8.0
